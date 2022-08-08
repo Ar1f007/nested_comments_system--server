@@ -21,7 +21,7 @@ model User {
   id       String    @id @default(uuid())
   name     String
   comments Comment[]
-  like     Like[]
+  likes    Like[]
 }
 
 model Comment {
@@ -37,7 +37,7 @@ model Comment {
   children  Comment[] @relation("ParentChild")
   parentId  String?
 
-  like Like[]
+  likes Like[]
 }
 
 model Like {
