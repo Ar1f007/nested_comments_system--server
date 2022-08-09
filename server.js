@@ -170,6 +170,27 @@ app.delete('/posts/:postId/comments/:commentId', async (req, res) => {
   );
 });
 
+app.post('/posts/:postId/comments/:commentId/toggleLike', async (req, res) => {
+  const data = {
+    commentId: req.params.commentId,
+    userId: req.cookies.userId,
+  };
+
+  const like = await prisma.like.findUnique({
+    where: { userId_commentId: data },
+  });
+
+  if (like == null) {
+    return await commitToDb(prisma.like.create({ data })).then(() => {
+      return { addLike: true };
+    });
+  } else {
+    return await commitToDb(prisma.like.delete({ where: { userId_commentId: data } })).then(() => {
+      return { addLike: false };
+    });
+  }
+});
+
 async function commitToDb(promise) {
   const [error, data] = await app.to(promise);
 
