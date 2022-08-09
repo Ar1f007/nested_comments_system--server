@@ -27,6 +27,19 @@ const prisma = new PrismaClient();
 
 const CURRENT_USER_ID = (await prisma.user.findFirst({ where: { name: 'John' } })).id;
 
+const COMMENT_SELECT_FIELDS = {
+  id: true,
+  message: true,
+  parentId: true,
+  createdAt: true,
+  user: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
+};
+
 app.get('/posts', async (req, res) => {
   return await commitToDb(
     prisma.post.findMany({
@@ -51,15 +64,7 @@ app.get('/posts/:id', async (req, res) => {
           orderBy: {
             createdAt: 'desc',
           },
-          select: {
-            id: true,
-            message: true,
-            parentId: true,
-            createdAt: true,
-            user: {
-              select: { id: true, name: true },
-            },
-          },
+          select: COMMENT_SELECT_FIELDS,
         },
       },
     })
@@ -77,6 +82,32 @@ app.post('/posts/:id/comments', async (req, res) => {
   return await commitToDb(
     prisma.comment.create({
       data: { message, userId: req.cookies.userId, parentId, postId: req.params.id },
+      select: COMMENT_SELECT_FIELDS,
+    })
+  );
+});
+
+app.put('/posts/:postId/comments/:commentId', async (req, res) => {
+  const message = req.body?.message;
+
+  if (message === '' || message === null) {
+    return res.send(app.httpErrors.badRequest('Message is required'));
+  }
+
+  const { userId } = await prisma.comment.findUnique({
+    where: { id: req.params.commentId },
+    select: { userId: true },
+  });
+
+  if (userId !== req.cookies.userId) {
+    return res.send(app.httpErrors.unauthorized('You do not have permission to edit this message'));
+  }
+
+  return await commitToDb(
+    prisma.comment.update({
+      where: { id: req.params.commentId },
+      data: { message },
+      select: { message: true },
     })
   );
 });
